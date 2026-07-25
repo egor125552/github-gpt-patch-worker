@@ -4,7 +4,7 @@ info:
   version: 0.1.0
   description: Read complete GitHub files and apply small unified patches without resending whole files.
 servers:
-  - url: https://REPLACE-WITH-YOUR-WORKER.workers.dev
+  - url: https://github-gpt-patch-worker.k69ysrndm7.workers.dev
 paths:
   /health:
     get:
