@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: GitHub Patch Worker
-  version: 0.1.0
+  version: 0.1.1
   description: Read complete GitHub files and apply small unified patches without resending whole files.
 servers:
   - url: https://github-gpt-patch-worker.k69ysrndm7.workers.dev
@@ -17,7 +17,14 @@ paths:
             application/json:
               schema:
                 type: object
-                additionalProperties: true
+                required: [ok, service, version]
+                properties:
+                  ok:
+                    type: boolean
+                  service:
+                    type: string
+                  version:
+                    type: string
   /github/read-file:
     post:
       operationId: readGitHubFile
@@ -46,7 +53,46 @@ paths:
             application/json:
               schema:
                 type: object
-                additionalProperties: true
+                required: [ok, path, ref, blobSha, totalLines, content]
+                properties:
+                  ok:
+                    type: boolean
+                  path:
+                    type: string
+                  ref:
+                    type: string
+                  blobSha:
+                    type: string
+                  totalLines:
+                    type: integer
+                  content:
+                    type: string
+        "401":
+          description: Invalid bridge key
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, error]
+                properties:
+                  ok:
+                    type: boolean
+                  error:
+                    type: string
+        "500":
+          description: GitHub or Worker error
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, error, message]
+                properties:
+                  ok:
+                    type: boolean
+                  error:
+                    type: string
+                  message:
+                    type: string
   /github/apply-patches:
     post:
       operationId: applyGitHubPatches
@@ -58,13 +104,7 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - owner
-                - repo
-                - branch
-                - expectedCommitSha
-                - message
-                - patches
+              required: [owner, repo, branch, expectedCommitSha, message, patches]
               properties:
                 owner:
                   type: string
@@ -96,11 +136,89 @@ paths:
             application/json:
               schema:
                 type: object
-                additionalProperties: true
+                required: [ok, branch, previousCommitSha, commitSha, commitUrl, changedFiles]
+                properties:
+                  ok:
+                    type: boolean
+                  branch:
+                    type: string
+                  previousCommitSha:
+                    type: string
+                  commitSha:
+                    type: string
+                  commitUrl:
+                    type: string
+                  changedFiles:
+                    type: array
+                    items:
+                      type: object
+                      required: [path, oldBlobSha, newBlobSha]
+                      properties:
+                        path:
+                          type: string
+                        oldBlobSha:
+                          type: string
+                        newBlobSha:
+                          type: string
+        "400":
+          description: Patch produced no change or request was invalid
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, error]
+                properties:
+                  ok:
+                    type: boolean
+                  error:
+                    type: string
+                  path:
+                    type: string
+                  message:
+                    type: string
+        "401":
+          description: Invalid bridge key
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, error]
+                properties:
+                  ok:
+                    type: boolean
+                  error:
+                    type: string
         "409":
           description: Branch changed or patch conflict
           content:
             application/json:
               schema:
                 type: object
-                additionalProperties: true
+                required: [ok, error]
+                properties:
+                  ok:
+                    type: boolean
+                  error:
+                    type: string
+                  expectedCommitSha:
+                    type: string
+                  actualCommitSha:
+                    type: string
+                  path:
+                    type: string
+                  message:
+                    type: string
+        "500":
+          description: GitHub or Worker error
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, error, message]
+                properties:
+                  ok:
+                    type: boolean
+                  error:
+                    type: string
+                  message:
+                    type: string
