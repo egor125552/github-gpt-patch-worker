@@ -1,4 +1,5 @@
 import worker from "./index";
+import { readCapabilities, runRepositoryRead } from "./repository-read";
 
 type Env = {
   GITHUB_TOKEN: string;
@@ -20,9 +21,10 @@ const capabilities = [
   },
   {
     command: "apply_patches",
-    description: "Apply exact unified patches to up to 20 existing text files in one commit.",
+    description: "Apply exact unified patches to up to 20 existing text files in one commit. Read the target file first and use the current branch commit SHA. A missing or changed line causes patch_conflict and no commit.",
     requiredArgs: ["owner", "repo", "branch", "expectedCommitSha", "message", "patches"]
-  }
+  },
+  ...readCapabilities
 ];
 
 function json(body: unknown, status = 200): Response {
@@ -89,6 +91,22 @@ async function handleCommand(request: Request, env: Env): Promise<Response> {
     return worker.fetch(
       commandRequest(request, "/github/apply-patches", args),
       env
+    );
+  }
+
+  try {
+    const result = await runRepositoryRead(command, args, env);
+    if (result !== undefined) {
+      return json({ ok: true, command, data: result });
+    }
+  } catch (error) {
+    return json(
+      {
+        ok: false,
+        error: "repository_read_failed",
+        message: error instanceof Error ? error.message : "Unknown error"
+      },
+      400
     );
   }
 
