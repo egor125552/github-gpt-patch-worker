@@ -1,0 +1,106 @@
+openapi: 3.1.0
+info:
+  title: GitHub Patch Worker
+  version: 0.1.0
+  description: Read complete GitHub files and apply small unified patches without resending whole files.
+servers:
+  - url: https://REPLACE-WITH-YOUR-WORKER.workers.dev
+paths:
+  /health:
+    get:
+      operationId: checkPatchWorker
+      summary: Check whether the Worker is online
+      responses:
+        "200":
+          description: Worker status
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /github/read-file:
+    post:
+      operationId: readGitHubFile
+      summary: Read a complete UTF-8 text file at a branch, tag, or commit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [owner, repo, path, ref]
+              properties:
+                owner:
+                  type: string
+                repo:
+                  type: string
+                path:
+                  type: string
+                ref:
+                  type: string
+                  description: Branch, tag, or commit SHA
+      responses:
+        "200":
+          description: File contents and blob metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /github/apply-patches:
+    post:
+      operationId: applyGitHubPatches
+      summary: Apply exact unified patches to up to 20 existing text files in one commit
+      description: The patch must be based on expectedCommitSha. If the branch moved or a hunk does not match exactly, no commit is created.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - owner
+                - repo
+                - branch
+                - expectedCommitSha
+                - message
+                - patches
+              properties:
+                owner:
+                  type: string
+                repo:
+                  type: string
+                branch:
+                  type: string
+                expectedCommitSha:
+                  type: string
+                message:
+                  type: string
+                patches:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items:
+                    type: object
+                    required: [path, patch]
+                    properties:
+                      path:
+                        type: string
+                      patch:
+                        type: string
+                        description: Standard unified diff for this file
+      responses:
+        "200":
+          description: New commit and changed files
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "409":
+          description: Branch changed or patch conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
