@@ -1,4 +1,5 @@
 import worker from "./index";
+import { apiCapabilities, runGitHubApi } from "./github-api";
 import { readCapabilities, runRepositoryRead } from "./repository-read";
 
 type Env = {
@@ -24,7 +25,8 @@ const capabilities = [
     description: "Apply exact unified patches to up to 20 existing text files in one commit. Read the target file first and use the current branch commit SHA. A missing or changed line causes patch_conflict and no commit.",
     requiredArgs: ["owner", "repo", "branch", "expectedCommitSha", "message", "patches"]
   },
-  ...readCapabilities
+  ...readCapabilities,
+  ...apiCapabilities
 ];
 
 function json(body: unknown, status = 200): Response {
@@ -95,15 +97,20 @@ async function handleCommand(request: Request, env: Env): Promise<Response> {
   }
 
   try {
-    const result = await runRepositoryRead(command, args, env);
-    if (result !== undefined) {
-      return json({ ok: true, command, data: result });
+    const repositoryResult = await runRepositoryRead(command, args, env);
+    if (repositoryResult !== undefined) {
+      return json({ ok: true, command, data: repositoryResult });
+    }
+
+    const apiResult = await runGitHubApi(command, args, env);
+    if (apiResult !== undefined) {
+      return json({ ok: true, command, data: apiResult });
     }
   } catch (error) {
     return json(
       {
         ok: false,
-        error: "repository_read_failed",
+        error: "github_command_failed",
         message: error instanceof Error ? error.message : "Unknown error"
       },
       400
